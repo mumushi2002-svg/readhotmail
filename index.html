@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pastel Real Hotmail Reader & CORS Proxy</title>
+    <title>Hotmail Graph Reader & Debugger</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- FontAwesome for Icons -->
@@ -24,11 +24,11 @@
         <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-2xl bg-sky-200 flex items-center justify-center text-sky-700 shadow-inner">
-                    <i class="fa-solid fa-shield-halved text-lg"></i>
+                    <i class="fa-solid fa-bug text-lg"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold text-slate-800">Hotmail Graph Reader (CORS Proxy)</h1>
-                    <p class="text-xs text-slate-500">ระบบดึงเมลจริงผ่านตัวกลาง ป้องกันข้อผิดพลาด AADSTS90023</p>
+                    <h1 class="text-xl font-bold text-slate-800">Hotmail Graph Reader (Debug Mode)</h1>
+                    <p class="text-xs text-slate-500">ตรวจสอบความถูกต้องของ Refresh Token และ Client ID แบบเรียลไทม์</p>
                 </div>
             </div>
 
@@ -73,7 +73,7 @@
                 <div class="lg:col-span-2 bg-white/90 backdrop-blur-sm p-5 rounded-3xl shadow-sm border border-sky-100 flex flex-col">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="font-semibold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-list-check text-emerald-500"></i> รายการบัญชีพร้อมดึงข้อความจริง <span id="result-count" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">0 รายการ</span>
+                            <i class="fa-solid fa-list-check text-emerald-500"></i> รายการบัญชี <span id="result-count" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">0 รายการ</span>
                         </h2>
                     </div>
 
@@ -91,15 +91,15 @@
         <section id="tab-inbox" class="hidden space-y-6">
             <div class="bg-white/90 backdrop-blur-sm p-5 rounded-3xl shadow-sm border border-sky-100 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div class="flex items-center gap-3 w-full sm:w-auto">
-                    <select id="inbox-account-select" class="w-full sm:w-72 p-2.5 text-sm border border-sky-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-300 bg-slate-50">
+                    <select id="inbox-account-select" onchange="previewAccountInfo()" class="w-full sm:w-72 p-2.5 text-sm border border-sky-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-300 bg-slate-50">
                         <option value="">-- เลือกบัญชี Hotmail --</option>
                     </select>
-                    <button onclick="fetchRealInboxWithProxy()" class="bg-emerald-400 hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2.5 rounded-2xl shadow-sm transition-all flex items-center gap-2 whitespace-nowrap">
-                        <i class="fa-solid fa-cloud-arrow-down"></i> ดึงข้อความผ่าน Proxy
+                    <button onclick="fetchRealInboxWithDebug()" class="bg-emerald-400 hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2.5 rounded-2xl shadow-sm transition-all flex items-center gap-2 whitespace-nowrap">
+                        <i class="fa-solid fa-stethoscope"></i> ทดสอบและดึงเมล
                     </button>
                 </div>
                 <div class="text-xs text-slate-500 bg-sky-50 px-3 py-2 rounded-xl border border-sky-100">
-                    <i class="fa-solid fa-circle-info text-sky-500 mr-1"></i> ใช้ CORS Proxy ข้ามการบล็อกของ Microsoft สำเร็จ 100%
+                    <i class="fa-solid fa-circle-info text-sky-500 mr-1"></i> โหมด Debug แสดงรายละเอียด Error จาก Microsoft ชัดเจน
                 </div>
             </div>
 
@@ -109,7 +109,7 @@
                 <div class="md:col-span-1 bg-white/90 backdrop-blur-sm p-4 rounded-3xl shadow-sm border border-sky-100 overflow-y-auto max-h-[500px]" id="mail-list-container">
                     <div class="text-center py-16 text-slate-400">
                         <i class="fa-solid fa-inbox text-3xl mb-2 text-sky-200"></i>
-                        <p class="text-sm">เลือกบัญชีแล้วกด "ดึงข้อความผ่าน Proxy"</p>
+                        <p class="text-sm">เลือกบัญชีแล้วกด "ทดสอบและดึงเมล"</p>
                     </div>
                 </div>
 
@@ -127,7 +127,7 @@
 
     <!-- Footer -->
     <footer class="text-center py-4 text-xs text-slate-400 mt-auto">
-        Hotmail Graph Reader (CORS Proxy Edition) &bull; รองรับการดึงเมลจริง
+        Hotmail Graph Reader (Debug Edition) &bull; ตรวจสอบ Token และ Client ID
     </footer>
 
     <!-- JavaScript Logic -->
@@ -198,8 +198,8 @@
                                 <i class="fa-solid fa-envelope text-sky-400"></i> ${acc.mail}
                             </div>
                             <div class="text-xs text-slate-400 truncate mt-1">
-                                <span class="bg-sky-100 text-sky-600 px-1.5 py-0.5 rounded mr-1">Pass: ${acc.pass ? '***' : 'N/A'}</span>
-                                <span class="bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded">Token: ${acc.refreshToken ? acc.refreshToken.substring(0, 15) + '...' : 'N/A'}</span>
+                                <span class="bg-sky-100 text-sky-600 px-1.5 py-0.5 rounded mr-1">Client ID: ${acc.clientId ? acc.clientId.substring(0, 8) + '...' : 'ไม่มี'}</span>
+                                <span class="bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded">Token: ${acc.refreshToken ? acc.refreshToken.substring(0, 10) + '...' : 'ไม่มี'}</span>
                             </div>
                         </div>
                         <div class="flex gap-1.5 w-full sm:w-auto justify-end">
@@ -237,11 +237,40 @@
         function openAccountInbox(mail) {
             switchTab('inbox');
             document.getElementById('inbox-account-select').value = mail;
-            fetchRealInboxWithProxy();
+            previewAccountInfo();
         }
 
-        // ฟังก์ชันดึงเมลผ่าน CORS Proxy เพื่อแก้ปัญหา AADSTS90023
-        async function fetchRealInboxWithProxy() {
+        function previewAccountInfo() {
+            const mail = document.getElementById('inbox-account-select').value;
+            const previewContainer = document.getElementById('mail-preview-container');
+            const currentAcc = accountsData.find(a => a.mail === mail);
+
+            if (!currentAcc) return;
+
+            previewContainer.innerHTML = `
+                <div class="border-b border-sky-100 pb-3 mb-4">
+                    <h3 class="font-bold text-slate-800 text-base">ข้อมูลชุดข้อมูลของ: ${currentAcc.mail}</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">ตรวจสอบความถูกต้องก่อนกดดึงข้อมูล</p>
+                </div>
+                <div class="space-y-3 text-xs">
+                    <div class="bg-slate-50 p-3 rounded-2xl border border-sky-100">
+                        <span class="font-bold text-slate-700 block mb-1">Password:</span>
+                        <span class="text-slate-600">${currentAcc.pass || 'ไม่ได้ระบุ'}</span>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-2xl border border-sky-100">
+                        <span class="font-bold text-slate-700 block mb-1">Client ID:</span>
+                        <span class="text-slate-600 break-all font-mono">${currentAcc.clientId || 'ไม่ได้ระบุ'}</span>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-2xl border border-sky-100">
+                        <span class="font-bold text-slate-700 block mb-1">Refresh Token:</span>
+                        <span class="text-slate-600 break-all font-mono">${currentAcc.refreshToken || 'ไม่ได้ระบุ'}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ฟังก์ชันดึงเมลพร้อมโหมด Debug ข้อผิดพลาดจาก Microsoft
+        async function fetchRealInboxWithDebug() {
             const mail = document.getElementById('inbox-account-select').value;
             const mailList = document.getElementById('mail-list-container');
             
@@ -252,14 +281,13 @@
 
             const currentAcc = accountsData.find(a => a.mail === mail);
             if (!currentAcc || !currentAcc.refreshToken || !currentAcc.clientId) {
-                mailList.innerHTML = `<div class="text-center py-12 text-amber-500 bg-amber-50 rounded-2xl border border-amber-100 p-4"><p class="text-xs">บัญชีนี้ไม่มี Refresh Token หรือ Client ID รูปแบบที่ถูกต้องคือ: <b>Mail | pass | refresh_token | client_id</b></p></div>`;
+                mailList.innerHTML = `<div class="text-center py-12 text-amber-500 bg-amber-50 rounded-2xl border border-amber-100 p-4"><p class="text-xs">ข้อมูลไม่ครบถ้วน รูปแบบต้องเป็น: <b>Mail | pass | refresh_token | client_id</b></p></div>`;
                 return;
             }
 
-            mailList.innerHTML = `<div class="text-center py-12 text-slate-400"><i class="fa-solid fa-spinner fa-spin text-2xl text-sky-400 mb-2"></i><p class="text-sm">กำลังเชื่อมต่อผ่าน CORS Proxy เพื่อดึงเมลจริง...</p></div>`;
+            mailList.innerHTML = `<div class="text-center py-12 text-slate-400"><i class="fa-solid fa-spinner fa-spin text-2xl text-sky-400 mb-2"></i><p class="text-sm">กำลังตรวจสอบ Token กับ Microsoft...</p></div>`;
 
             try {
-                // ขั้นที่ 1: ขอ Access Token ผ่าน CORS Proxy (corsproxy.io)
                 const tokenParams = new URLSearchParams();
                 tokenParams.append('client_id', currentAcc.clientId);
                 tokenParams.append('scope', 'https://graph.microsoft.com/Mail.Read offline_access');
@@ -279,12 +307,12 @@
                 const tokenData = await tokenRes.json();
                 
                 if (!tokenData.access_token) {
-                    throw new Error(tokenData.error_description || 'ไม่สามารถแลก Access Token ได้ (Token อาจหมดอายุหรือ Client ID ไม่ถูกต้อง)');
+                    throw new Error(tokenData.error_description || JSON.stringify(tokenData));
                 }
 
                 const accessToken = tokenData.access_token;
 
-                // ขั้นที่ 2: ดึงรายการข้อความจาก Microsoft Graph API ผ่าน Proxy
+                // ดึงรายการข้อความ
                 const messagesProxyUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://graph.microsoft.com/v1.0/me/messages?$select=subject,from,receivedDateTime,body,isRead&$top=20');
                 
                 const mailRes = await fetch(messagesProxyUrl, {
@@ -296,7 +324,7 @@
                 const mailData = await mailRes.json();
 
                 if (!mailData.value || mailData.value.length === 0) {
-                    mailList.innerHTML = `<div class="text-center py-12 text-slate-400"><p class="text-sm">ไม่พบข้อความในกล่องจดหมายนี้</p></div>`;
+                    mailList.innerHTML = `<div class="text-center py-12 text-slate-400"><p class="text-sm">เชื่อมต่อสำเร็จ แต่ไม่พบข้อความในกล่องจดหมายนี้</p></div>`;
                     return;
                 }
 
@@ -308,7 +336,6 @@
                     const timeStr = new Date(msg.receivedDateTime).toLocaleString('th-TH');
                     const bodyContent = msg.body ? msg.body.content : '';
 
-                    // ค้นหารหัส OTP 4-6 หลักในเนื้อหาอัตโนมัติ
                     const otpMatch = bodyContent.match(/\b\d{4,6}\b/);
                     const otpCode = otpMatch ? otpMatch[0] : 'ไม่พบ OTP';
 
@@ -338,10 +365,13 @@
 
             } catch (error) {
                 mailList.innerHTML = `
-                    <div class="p-4 bg-red-50 border border-red-100 rounded-2xl text-center">
-                        <i class="fa-solid fa-triangle-exclamation text-red-400 text-2xl mb-2"></i>
-                        <p class="text-xs font-medium text-red-600 mb-1">ดึงข้อมูลไม่สำเร็จ</p>
-                        <p class="text-[11px] text-slate-500">${error.message}</p>
+                    <div class="p-4 bg-red-50 border border-red-100 rounded-2xl text-left">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="fa-solid fa-triangle-exclamation text-red-500 text-lg"></i>
+                            <span class="text-xs font-bold text-red-700">Microsoft ปฏิเสธการแลก Token</span>
+                        </div>
+                        <p class="text-[11px] text-slate-600 font-mono bg-white p-2 rounded-xl border border-red-100 break-all">${error.message}</p>
+                        <p class="text-[10px] text-slate-500 mt-2"><b>แนวทางแก้ไข:</b> Refresh Token นี้อาจหมดอายุ ถูกเปลี่ยนรหัสผ่าน หรือชุด Client ID ไม่ถูกต้อง กรุณานำชุดข้อมูลชุดใหม่มาลองทดสอบครับ</p>
                     </div>
                 `;
             }
