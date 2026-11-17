@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pastel Hotmail Reader & Token Manager</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Prompt) -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+        .pastel-gradient {
+            background: linear-gradient(135deg, #e0f2fe 0%, #d1fae5 50%, #fce7f3 100%);
+        }
+    </style>
+</head>
+<body class="pastel-gradient min-h-screen text-slate-700 flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-md shadow-sm border-b border-sky-100 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-sky-200 flex items-center justify-center text-sky-700 shadow-inner">
+                    <i class="fa-solid fa-envelope-open-text text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-800">Pastel Mail Reader</h1>
+                    <p class="text-xs text-slate-500">ระบบจัดการและอ่านข้อความ Hotmail / Token อัตโนมัติ</p>
+                </div>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="flex bg-slate-100 p-1.5 rounded-2xl gap-1">
+                <button onclick="switchTab('parser')" id="tab-btn-parser" class="px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 bg-white text-sky-600 shadow-sm">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i> แยก Credential
+                </button>
+                <button onclick="switchTab('inbox')" id="tab-btn-inbox" class="px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 text-slate-600 hover:text-sky-600">
+                    <i class="fa-solid fa-inbox mr-1.5"></i> กล่องข้อความ (Inbox)
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+
+        <!-- TAB 1: PARSER -->
+        <section id="tab-parser" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Input Panel -->
+                <div class="lg:col-span-1 bg-white/90 backdrop-blur-sm p-5 rounded-3xl shadow-sm border border-sky-100 flex flex-col">
+                    <h2 class="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-code text-sky-500"></i> วางข้อความชุดข้อมูล
+                    </h2>
+                    <p class="text-xs text-slate-400 mb-3">รูปแบบ: Mail | pass | refresh_token | client_id</p>
+                    
+                    <textarea id="raw-input" rows="8" placeholder="example@hotmail.com | password123 | M.R3_... | client-id-uuid..." class="w-full p-3 text-sm border border-sky-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-300 resize-none bg-slate-50/50 mb-4"></textarea>
+                    
+                    <div class="flex gap-2 mt-auto">
+                        <button onclick="parseCredentials()" class="flex-1 bg-sky-400 hover:bg-sky-500 text-white font-medium py-2.5 px-4 rounded-2xl shadow-sm transition-all text-sm flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-gears"></i> ประมวลผล
+                        </button>
+                        <button onclick="clearInput()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium py-2.5 px-4 rounded-2xl transition-all text-sm">
+                            ล้าง
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Result Panel -->
+                <div class="lg:col-span-2 bg-white/90 backdrop-blur-sm p-5 rounded-3xl shadow-sm border border-sky-100 flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-semibold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-emerald-500"></i> ผลลัพธ์การแยกข้อมูล <span id="result-count" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">0 รายการ</span>
+                        </h2>
+                        <button onclick="copyAllParsed()" class="text-xs bg-sky-50 hover:bg-sky-100 text-sky-600 px-3 py-1.5 rounded-xl font-medium transition-all">
+                            <i class="fa-regular fa-copy mr-1"></i> คัดลอกทั้งหมด
+                        </button>
+                    </div>
+
+                    <div id="parsed-results-container" class="space-y-3 overflow-y-auto max-h-[450px] pr-1">
+                        <div class="text-center py-12 text-slate-400 border-2 border-dashed border-slate-100 rounded-2xl">
+                            <i class="fa-solid fa-folder-open text-3xl mb-2 text-sky-200"></i>
+                            <p class="text-sm">ยังไม่มีข้อมูล กรุณาวางข้อความและกดประมวลผล</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: INBOX -->
+        <section id="tab-inbox" class="hidden space-y-6">
+            <div class="bg-white/90 backdrop-blur-sm p-5 rounded-3xl shadow-sm border border-sky-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <select id="inbox-account-select" class="w-full sm:w-72 p-2.5 text-sm border border-sky-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-300 bg-slate-50">
+                        <option value="">-- เลือกบัญชี Hotmail --</option>
+                    </select>
+                    <button onclick="fetchInboxMessages()" class="bg-emerald-400 hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2.5 rounded-2xl shadow-sm transition-all flex items-center gap-2 whitespace-nowrap">
+                        <i class="fa-solid fa-rotate"></i> ดึงเมล
+                    </button>
+                </div>
+                <div class="relative w-full sm:w-72">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </span>
+                    <input type="text" id="inbox-search" oninput="filterInbox()" placeholder="ค้นหาชื่อผู้ส่ง หรือเนื้อหา OTP..." class="w-full pl-9 pr-4 py-2 text-sm border border-sky-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-300 bg-slate-50">
+                </div>
+            </div>
+
+            <!-- Mail List & Preview Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Mail List -->
+                <div class="md:col-span-1 bg-white/90 backdrop-blur-sm p-4 rounded-3xl shadow-sm border border-sky-100 overflow-y-auto max-h-[500px]" id="mail-list-container">
+                    <div class="text-center py-16 text-slate-400">
+                        <i class="fa-solid fa-inbox text-3xl mb-2 text-sky-200"></i>
+                        <p class="text-sm">เลือกบัญชีแล้วกด "ดึงเมล"</p>
+                    </div>
+                </div>
+
+                <!-- Mail Preview -->
+                <div class="md:col-span-2 bg-white/90 backdrop-blur-sm p-6 rounded-3xl shadow-sm border border-sky-100 flex flex-col min-h-[400px]" id="mail-preview-container">
+                    <div class="m-auto text-center text-slate-400">
+                        <i class="fa-regular fa-envelope-open text-4xl mb-2 text-sky-200"></i>
+                        <p class="text-sm">เลือกข้อความทางซ้ายเพื่ออ่านเนื้อหาและดูรหัส OTP</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-4 text-xs text-slate-400 mt-auto">
+        Pastel Mail Reader & Token Manager &bull; สร้างสรรค์เพื่อความสะดวกในการใช้งาน
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        let accountsData = [];
+
+        function switchTab(tabName) {
+            const parserTab = document.getElementById('tab-parser');
+            const inboxTab = document.getElementById('tab-inbox');
+            const btnParser = document.getElementById('tab-btn-parser');
+            const btnInbox = document.getElementById('tab-btn-inbox');
+
+            if (tabName === 'parser') {
+                parserTab.classList.remove('hidden');
+                inboxTab.classList.add('hidden');
+                btnParser.className = "px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 bg-white text-sky-600 shadow-sm";
+                btnInbox.className = "px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 text-slate-600 hover:text-sky-600";
+            } else {
+                parserTab.classList.add('hidden');
+                inboxTab.classList.remove('hidden');
+                btnInbox.className = "px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 bg-white text-sky-600 shadow-sm";
+                btnParser.className = "px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 text-slate-600 hover:text-sky-600";
+                updateAccountSelect();
+            }
+        }
+
+        function parseCredentials() {
+            const rawText = document.getElementById('raw-input').value.trim();
+            const container = document.getElementById('parsed-results-container');
+            const countBadge = document.getElementById('result-count');
+
+            if (!rawText) {
+                container.innerHTML = `<div class="text-center py-12 text-amber-500 bg-amber-50 rounded-2xl border border-amber-100"><p class="text-sm">กรุณากรอกข้อมูลก่อนกดประมวลผล</p></div>`;
+                countBadge.innerText = `0 รายการ`;
+                return;
+            }
+
+            const lines = rawText.split('\n');
+            accountsData = [];
+
+            lines.forEach((line, index) => {
+                if (!line.trim()) return;
+                const parts = line.split('|').map(p => p.trim());
+                if (parts.length >= 1) {
+                    accountsData.push({
+                        id: index,
+                        mail: parts[0] || '',
+                        pass: parts[1] || '',
+                        refreshToken: parts[2] || '',
+                        clientId: parts[3] || ''
+                    });
+                }
+            });
+
+            countBadge.innerText = `${accountsData.length} รายการ`;
+
+            if (accountsData.length === 0) {
+                container.innerHTML = `<div class="text-center py-12 text-red-400"><p class="text-sm">ไม่พบรูปแบบข้อมูลที่ถูกต้อง</p></div>`;
+                return;
+            }
+
+            let html = '';
+            accountsData.forEach(acc => {
+                html += `
+                    <div class="p-3.5 bg-slate-50 border border-sky-100 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div class="overflow-hidden w-full">
+                            <div class="font-medium text-slate-800 text-sm truncate flex items-center gap-2">
+                                <i class="fa-solid fa-envelope text-sky-400"></i> ${acc.mail}
+                            </div>
+                            <div class="text-xs text-slate-400 truncate mt-1">
+                                <span class="bg-sky-100 text-sky-600 px-1.5 py-0.5 rounded mr-1">Pass: ${acc.pass ? '***' : 'N/A'}</span>
+                                <span class="bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded">Token: ${acc.refreshToken ? acc.refreshToken.substring(0, 15) + '...' : 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-1.5 w-full sm:w-auto justify-end">
+                            <button onclick="copySingle('${acc.mail}', '${acc.pass}', '${acc.refreshToken}', '${acc.clientId}')" class="px-3 py-1.5 bg-white border border-sky-100 hover:bg-sky-50 text-sky-600 text-xs rounded-xl font-medium transition-all shadow-sm">
+                                คัดลอก
+                            </button>
+                            <button onclick="openAccountInbox('${acc.mail}')" class="px-3 py-1.5 bg-sky-400 hover:bg-sky-500 text-white text-xs rounded-xl font-medium transition-all shadow-sm">
+                                อ่านเมล
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function clearInput() {
+            document.getElementById('raw-input').value = '';
+            document.getElementById('parsed-results-container').innerHTML = `
+                <div class="text-center py-12 text-slate-400 border-2 border-dashed border-slate-100 rounded-2xl">
+                    <i class="fa-solid fa-folder-open text-3xl mb-2 text-sky-200"></i>
+                    <p class="text-sm">ยังไม่มีข้อมูล กรุณาวางข้อความและกดประมวลผล</p>
+                </div>
+            `;
+            document.getElementById('result-count').innerText = `0 รายการ`;
+            accountsData = [];
+        }
+
+        function copySingle(mail, pass, token, clientId) {
+            const text = `${mail} | ${pass} | ${token} | ${clientId}`;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('คัดลอกข้อมูลเรียบร้อยแล้ว!');
+            });
+        }
+
+        function copyAllParsed() {
+            if (accountsData.length === 0) return alert('ไม่มีข้อมูลให้คัดลอก');
+            const allText = accountsData.map(a => `${a.mail} | ${a.pass} | ${a.refreshToken} | ${a.clientId}`).join('\n');
+            navigator.clipboard.writeText(allText).then(() => {
+                alert('คัดลอกทั้งหมดเรียบร้อยแล้ว!');
+            });
+        }
+
+        function updateAccountSelect() {
+            const select = document.getElementById('inbox-account-select');
+            select.innerHTML = '<option value="">-- เลือกบัญชี Hotmail --</option>';
+            accountsData.forEach(acc => {
+                select.innerHTML += `<option value="${acc.mail}">${acc.mail}</option>`;
+            });
+        }
+
+        function openAccountInbox(mail) {
+            switchTab('inbox');
+            document.getElementById('inbox-account-select').value = mail;
+            fetchInboxMessages();
+        }
+
+        function fetchInboxMessages() {
+            const mail = document.getElementById('inbox-account-select').value;
+            const mailList = document.getElementById('mail-list-container');
+            
+            if (!mail) {
+                alert('กรุณาเลือกบัญชี Hotmail ก่อนดึงเมล');
+                return;
+            }
+
+            mailList.innerHTML = `<div class="text-center py-12 text-slate-400"><i class="fa-solid fa-spinner fa-spin text-2xl text-sky-400 mb-2"></i><p class="text-sm">กำลังเชื่อมต่อและดึงข้อความ...</p></div>`;
+
+            setTimeout(() => {
+                // จำลองข้อมูลตัวอย่างข้อความเข้า (รวม OTP)
+                const mockMessages = [
+                    { id: 1, sender: 'Microsoft account team', subject: 'Security code verification', time: '10 นาทีที่แล้ว', body: 'รหัสความปลอดภัยของคุณคือ: <b>892341</b> โปรดใช้รหัสนี้ยืนยันตัวตน', otp: '892341' },
+                    { id: 2, sender: 'TikTok Support', subject: 'Your login verification code', time: '1 ชั่วโมงที่แล้ว', body: 'Verification code: <b>541290</b>. Do not share this code.', otp: '541290' },
+                    { id: 3, sender: 'Facebook', subject: 'Confirm your account', time: 'เมื่อวานนี้', body: 'Use confirmation code <b>773120</b> to finish setting up Facebook.', otp: '773120' }
+                ];
+
+                let html = '';
+                mockMessages.forEach(msg => {
+                    html += `
+                        <div onclick="viewMessage(${msg.id}, '${msg.sender}', '${msg.subject}', '${msg.time}', '${encodeURIComponent(msg.body)}', '${msg.otp}')" class="p-3 bg-slate-50 hover:bg-sky-50 border border-sky-100 rounded-2xl cursor-pointer transition-all mb-2">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-medium text-xs text-slate-800 truncate">${msg.sender}</span>
+                                <span class="text-[10px] text-slate-400">${msg.time}</span>
+                            </div>
+                            <div class="text-xs text-slate-600 font-medium truncate">${msg.subject}</div>
+                            <div class="mt-1 flex items-center justify-between">
+                                <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">OTP: ${msg.otp}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                mailList.innerHTML = html;
+            }, 800);
+        }
+
+        function viewMessage(id, sender, subject, time, encodedBody, otp) {
+            const body = decodeURIComponent(encodedBody);
+            const previewContainer = document.getElementById('mail-preview-container');
+            
+            previewContainer.innerHTML = `
+                <div class="border-b border-sky-100 pb-3 mb-4">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-base">${subject}</h3>
+                            <p class="text-xs text-slate-500 mt-0.5">จาก: <span class="text-sky-600 font-medium">${sender}</span></p>
+                        </div>
+                        <span class="text-xs text-slate-400">${time}</span>
+                    </div>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-100 p-3 rounded-2xl mb-4 flex justify-between items-center">
+                    <div>
+                        <span class="text-xs text-emerald-700 font-medium block">รหัส OTP ที่ดึงได้อัตโนมัติ:</span>
+                        <span class="text-xl font-bold text-emerald-800 tracking-wider">${otp}</span>
+                    </div>
+                    <button onclick="navigator.clipboard.writeText('${otp}').then(()=>alert('คัดลอก OTP เรียบร้อย!'))" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-xl font-medium shadow-sm transition-all">
+                        คัดลอก OTP
+                    </button>
+                </div>
+                <div class="text-sm text-slate-600 bg-slate-50 p-4 rounded-2xl border border-sky-100 flex-grow">
+                    ${body}
+                </div>
+            `;
+        }
+
+        function filterInbox() {
+            // ฟังก์ชันค้นหาข้อความในกล่องจดหมาย
+            const keyword = document.getElementById('inbox-search').value.toLowerCase();
+            // สามารถเพิ่มการกรองรายการเมลได้ที่นี่
+        }
+    </script>
+</body>
+</html>
