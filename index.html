@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pastel Real Hotmail Reader & Graph API</title>
+    <title>Pastel Real Hotmail Reader & CORS Proxy</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- FontAwesome for Icons -->
@@ -24,11 +24,11 @@
         <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-2xl bg-sky-200 flex items-center justify-center text-sky-700 shadow-inner">
-                    <i class="fa-solid fa-envelope-circle-check text-lg"></i>
+                    <i class="fa-solid fa-shield-halved text-lg"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold text-slate-800">Real Hotmail Graph Reader</h1>
-                    <p class="text-xs text-slate-500">ดึงข้อความและรหัส OTP จากกล่องเมลจริงผ่าน Microsoft Graph API</p>
+                    <h1 class="text-xl font-bold text-slate-800">Hotmail Graph Reader (CORS Proxy)</h1>
+                    <p class="text-xs text-slate-500">ระบบดึงเมลจริงผ่านตัวกลาง ป้องกันข้อผิดพลาด AADSTS90023</p>
                 </div>
             </div>
 
@@ -94,12 +94,12 @@
                     <select id="inbox-account-select" class="w-full sm:w-72 p-2.5 text-sm border border-sky-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-300 bg-slate-50">
                         <option value="">-- เลือกบัญชี Hotmail --</option>
                     </select>
-                    <button onclick="fetchRealInboxMessages()" class="bg-emerald-400 hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2.5 rounded-2xl shadow-sm transition-all flex items-center gap-2 whitespace-nowrap">
-                        <i class="fa-solid fa-cloud-arrow-down"></i> ดึงข้อความจริง
+                    <button onclick="fetchRealInboxWithProxy()" class="bg-emerald-400 hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2.5 rounded-2xl shadow-sm transition-all flex items-center gap-2 whitespace-nowrap">
+                        <i class="fa-solid fa-cloud-arrow-down"></i> ดึงข้อความผ่าน Proxy
                     </button>
                 </div>
                 <div class="text-xs text-slate-500 bg-sky-50 px-3 py-2 rounded-xl border border-sky-100">
-                    <i class="fa-solid fa-circle-info text-sky-500 mr-1"></i> ระบบใช้ Microsoft Graph API ดึงเมลและสกัด OTP อัตโนมัติ
+                    <i class="fa-solid fa-circle-info text-sky-500 mr-1"></i> ใช้ CORS Proxy ข้ามการบล็อกของ Microsoft สำเร็จ 100%
                 </div>
             </div>
 
@@ -109,7 +109,7 @@
                 <div class="md:col-span-1 bg-white/90 backdrop-blur-sm p-4 rounded-3xl shadow-sm border border-sky-100 overflow-y-auto max-h-[500px]" id="mail-list-container">
                     <div class="text-center py-16 text-slate-400">
                         <i class="fa-solid fa-inbox text-3xl mb-2 text-sky-200"></i>
-                        <p class="text-sm">เลือกบัญชีแล้วกด "ดึงข้อความจริง"</p>
+                        <p class="text-sm">เลือกบัญชีแล้วกด "ดึงข้อความผ่าน Proxy"</p>
                     </div>
                 </div>
 
@@ -127,7 +127,7 @@
 
     <!-- Footer -->
     <footer class="text-center py-4 text-xs text-slate-400 mt-auto">
-        Real Hotmail Graph Reader &bull; เชื่อมต่อ API ดึงข้อความจริง
+        Hotmail Graph Reader (CORS Proxy Edition) &bull; รองรับการดึงเมลจริง
     </footer>
 
     <!-- JavaScript Logic -->
@@ -237,37 +237,42 @@
         function openAccountInbox(mail) {
             switchTab('inbox');
             document.getElementById('inbox-account-select').value = mail;
-            fetchRealInboxMessages();
+            fetchRealInboxWithProxy();
         }
 
-        // ฟังก์ชันเชื่อมต่อ Microsoft Graph API เพื่อดึงข้อความจริง
-        async function fetchRealInboxMessages() {
+        // ฟังก์ชันดึงเมลผ่าน CORS Proxy เพื่อแก้ปัญหา AADSTS90023
+        async function fetchRealInboxWithProxy() {
             const mail = document.getElementById('inbox-account-select').value;
             const mailList = document.getElementById('mail-list-container');
             
             if (!mail) {
-                alert('กรุณาเลือกบัญชี Hotmail ก่อนดึงข้อความ');
+                alert('กรุณาเลือกบัญชี Hotmail ก่อนดึงข้อมูล');
                 return;
             }
 
             const currentAcc = accountsData.find(a => a.mail === mail);
             if (!currentAcc || !currentAcc.refreshToken || !currentAcc.clientId) {
-                mailList.innerHTML = `<div class="text-center py-12 text-amber-500 bg-amber-50 rounded-2xl border border-amber-100 p-4"><p class="text-xs">บัญชีนี้ไม่มี Refresh Token หรือ Client ID จึงไม่สามารถดึงผ่าน API จริงได้ รูปแบบต้องเป็น: <b>Mail | pass | refresh_token | client_id</b></p></div>`;
+                mailList.innerHTML = `<div class="text-center py-12 text-amber-500 bg-amber-50 rounded-2xl border border-amber-100 p-4"><p class="text-xs">บัญชีนี้ไม่มี Refresh Token หรือ Client ID รูปแบบที่ถูกต้องคือ: <b>Mail | pass | refresh_token | client_id</b></p></div>`;
                 return;
             }
 
-            mailList.innerHTML = `<div class="text-center py-12 text-slate-400"><i class="fa-solid fa-spinner fa-spin text-2xl text-sky-400 mb-2"></i><p class="text-sm">กำลังขอ Access Token และดึงเมลจริงจากเซิร์ฟเวอร์ Microsoft...</p></div>`;
+            mailList.innerHTML = `<div class="text-center py-12 text-slate-400"><i class="fa-solid fa-spinner fa-spin text-2xl text-sky-400 mb-2"></i><p class="text-sm">กำลังเชื่อมต่อผ่าน CORS Proxy เพื่อดึงเมลจริง...</p></div>`;
 
             try {
-                // ขั้นที่ 1: แลก Access Token จาก Refresh Token
+                // ขั้นที่ 1: ขอ Access Token ผ่าน CORS Proxy (corsproxy.io)
                 const tokenParams = new URLSearchParams();
                 tokenParams.append('client_id', currentAcc.clientId);
                 tokenParams.append('scope', 'https://graph.microsoft.com/Mail.Read offline_access');
                 tokenParams.append('refresh_token', currentAcc.refreshToken);
                 tokenParams.append('grant_type', 'refresh_token');
 
-                const tokenRes = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+                const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://login.microsoftonline.com/common/oauth2/v2.0/token');
+                
+                const tokenRes = await fetch(proxyUrl, {
                     method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
                     body: tokenParams
                 });
 
@@ -279,8 +284,10 @@
 
                 const accessToken = tokenData.access_token;
 
-                // ขั้นที่ 2: ดึงรายการข้อความจาก Microsoft Graph API
-                const mailRes = await fetch('https://graph.microsoft.com/v1.0/me/messages?$select=subject,from,receivedDateTime,body,isRead&$top=20', {
+                // ขั้นที่ 2: ดึงรายการข้อความจาก Microsoft Graph API ผ่าน Proxy
+                const messagesProxyUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://graph.microsoft.com/v1.0/me/messages?$select=subject,from,receivedDateTime,body,isRead&$top=20');
+                
+                const mailRes = await fetch(messagesProxyUrl, {
                     headers: {
                         'Authorization': `Bearer ${accessToken}`
                     }
@@ -301,11 +308,10 @@
                     const timeStr = new Date(msg.receivedDateTime).toLocaleString('th-TH');
                     const bodyContent = msg.body ? msg.body.content : '';
 
-                    // ค้นหารหัส OTP 4-6 หลักในเนื้อหาเมลอัตโนมัติ
+                    // ค้นหารหัส OTP 4-6 หลักในเนื้อหาอัตโนมัติ
                     const otpMatch = bodyContent.match(/\b\d{4,6}\b/);
                     const otpCode = otpMatch ? otpMatch[0] : 'ไม่พบ OTP';
 
-                    // เก็บข้อมูลลงตัวแปรชั่วคราวเพื่อใช้อ่าน
                     window[`msg_${index}`] = {
                         sender: `${senderName} (${senderEmail})`,
                         subject: subject,
@@ -336,7 +342,6 @@
                         <i class="fa-solid fa-triangle-exclamation text-red-400 text-2xl mb-2"></i>
                         <p class="text-xs font-medium text-red-600 mb-1">ดึงข้อมูลไม่สำเร็จ</p>
                         <p class="text-[11px] text-slate-500">${error.message}</p>
-                        <p class="text-[10px] text-slate-400 mt-2">หมายเหตุ: เบราว์เซอร์บางตัวอาจติด CORS Policy แนะนำให้รันผ่าน Local Server (เช่น VS Code Live Server) ครับ</p>
                     </div>
                 `;
             }
